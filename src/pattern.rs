@@ -10,23 +10,15 @@ pub trait Pattern<'e> {
         Self::Element: 'e;
 
     fn iterate(&'e self) -> Self::Iterator;
-    fn interpolate<R>(
+    fn interpolate<R, P>(
         &'e self,
         replacements: &'e R,
-    ) -> PatternIterator<'e, Self, R, Self::Element, Self::Key>
+    ) -> PatternIterator<'e, Self, P, R, Self::Element, Self::Key>
     where
-        R: ReplacementProvider<'e, Element = Self::Element, Key = Self::Key>,
-        Self: Sized,
-        R::Pattern: Pattern<'e>;
+        R: ReplacementProvider<'e, P, Element = Self::Element, Key = Self::Key>,
+        P: Pattern<'e, Element = Self::Element, Key = Self::Key>,
+        Self: Sized;
 }
-
-// fn m<E, K, R>(i: &PatternElement<E, K>, replacements: R) -> &PatternElement<E, K> {
-//     if let PatternElement::Placeholder(p) = i {
-//         i
-//     } else {
-//         i
-//     }
-// }
 
 impl<'e, E: 'e, K: 'e> Pattern<'e> for Vec<PatternElement<E, K>> {
     type Element = E;
@@ -37,39 +29,68 @@ impl<'e, E: 'e, K: 'e> Pattern<'e> for Vec<PatternElement<E, K>> {
         self.iter()
     }
 
-    fn interpolate<R>(
+    fn interpolate<R, P>(
         &'e self,
         replacements: &'e R,
-    ) -> PatternIterator<'e, Self, R, Self::Element, Self::Key>
+    ) -> PatternIterator<'e, Self, P, R, Self::Element, Self::Key>
     where
-        R: ReplacementProvider<'e, Element = Self::Element, Key = Self::Key>,
+        R: ReplacementProvider<'e, P, Element = Self::Element, Key = Self::Key>,
+        P: Pattern<'e, Element = Self::Element, Key = Self::Key>,
         Self: Sized,
-        R::Pattern: Pattern<'e>,
     {
         PatternIterator {
             pattern: self.iterate(),
             replacements,
             current_pattern: None,
+            marker: Default::default(),
         }
     }
 }
 
-pub struct PatternIterator<'e, P, R, E: 'e, K: 'e>
+impl<'e, E: 'e, K: 'e> Pattern<'e> for &'e [PatternElement<E, K>] {
+    type Element = E;
+    type Key = K;
+    type Iterator = std::slice::Iter<'e, PatternElement<E, K>>;
+
+    fn iterate(&'e self) -> Self::Iterator {
+        self.iter()
+    }
+
+    fn interpolate<R, P>(
+        &'e self,
+        replacements: &'e R,
+    ) -> PatternIterator<'e, Self, P, R, Self::Element, Self::Key>
+    where
+        R: ReplacementProvider<'e, P, Element = Self::Element, Key = Self::Key>,
+        P: Pattern<'e, Element = Self::Element, Key = Self::Key>,
+        Self: Sized,
+    {
+        PatternIterator {
+            pattern: self.iterate(),
+            replacements,
+            current_pattern: None,
+            marker: Default::default(),
+        }
+    }
+}
+
+pub struct PatternIterator<'e, P, P2, R, E: 'e, K: 'e>
 where
     P: Pattern<'e, Element = E, Key = K>,
-    R: ReplacementProvider<'e, Element = E, Key = K>,
-    R::Pattern: Pattern<'e>,
+    P2: Pattern<'e, Element = E, Key = K>,
+    R: ReplacementProvider<'e, P2, Element = E, Key = K>,
 {
     pattern: <P as Pattern<'e>>::Iterator,
     replacements: &'e R,
-    current_pattern: Option<<R::Pattern as Pattern<'e>>::Iterator>,
+    current_pattern: Option<P2::Iterator>,
+    marker: std::marker::PhantomData<P2>,
 }
 
-impl<'e, P, R, E, K> Iterator for PatternIterator<'e, P, R, E, K>
+impl<'e, P, P2, R, E, K> Iterator for PatternIterator<'e, P, P2, R, E, K>
 where
-    P: Pattern<'e, Element = E, Key = K>,
-    R: ReplacementProvider<'e, Element = E, Key = K>,
-    R::Pattern: Pattern<'e, Element = E, Key = K>,
+    P: Pattern<'e, Element = E, Key = K> + 'e,
+    P2: Pattern<'e, Element = E, Key = K> + 'e,
+    R: ReplacementProvider<'e, P2, Element = E, Key = K>,
 {
     type Item = &'e PatternElement<E, K>;
 
