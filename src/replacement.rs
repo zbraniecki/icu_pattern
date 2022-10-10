@@ -2,23 +2,27 @@ use crate::pattern::Pattern;
 use crate::PatternElement;
 use std::collections::HashMap;
 
-pub trait ReplacementProvider<'r, P> {
-    type Element;
+pub trait ReplacementProvider<'r> {
     type Key;
+    type Collection;
 
-    fn get_replacement(&'r self, key: &Self::Key) -> Option<&'r P>;
+    fn get_replacement(
+        &'r self,
+        key: &Self::Key,
+    ) -> Option<&'r Pattern<Self::Collection, Self>> where Self: Sized;
 }
 
-impl<'r, E: 'r, P> ReplacementProvider<'r, P> for Vec<P>
-where
-    P: Pattern<'r, Element = E>,
-{
-    type Element = E;
+impl<'r, C, R> ReplacementProvider<'r> for Vec<Pattern<'r, C, R>> {
     type Key = usize;
+    type Collection = C;
 
-    fn get_replacement(&'r self, key: &Self::Key) -> Option<&'r P> {
-        let replacement = self.get(*key)?;
-        Some(replacement)
+    fn get_replacement(
+        &'r self,
+        key: &Self::Key,
+    ) -> Option<&'r Pattern<Self::Collection, Self>> {
+        todo!()
+        // let replacement = self.get(*key)?;
+        // Some(replacement)
     }
 }
 
