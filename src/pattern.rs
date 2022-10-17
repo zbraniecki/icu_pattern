@@ -5,11 +5,6 @@ pub enum PatternElement<E> {
     Placeholder(usize),
 }
 
-// pub enum ResolvedPatternElement<E> {
-//     Element(E),
-//     Literal(String),
-// }
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct Pattern<E = ()> {
     pub elements: Vec<PatternElement<E>>,

@@ -89,14 +89,16 @@ impl From<&DatePatternElement> for OutputElement {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct OutputRange {
-    range: Range<usize>,
-    role: OutputRole,
+    pub range: Range<usize>,
+    pub role: OutputRole,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum OutputRole {
     Date,
     Time,
+    DateTime,
+    Timezone,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -126,20 +128,20 @@ pub fn get_data() -> Data {
             format: Pattern {
                 elements: vec![
                     PatternElement::Element(TimePatternElement::Hour),
-                    // PatternElement::Literal(":".to_string()),
-                    // PatternElement::Element(TimePatternElement::Minute),
-                    // PatternElement::Literal(" ".to_string()),
-                    // PatternElement::Element(TimePatternElement::Timezone),
+                    PatternElement::Literal(":".to_string()),
+                    PatternElement::Element(TimePatternElement::Minute),
+                    PatternElement::Literal(" ".to_string()),
+                    PatternElement::Element(TimePatternElement::Timezone),
                 ],
             },
         },
         date: Date {
             format: Pattern {
                 elements: vec![
-                    // PatternElement::Element(DatePatternElement::Month),
-                    // PatternElement::Literal(" ".to_string()),
-                    // PatternElement::Element(DatePatternElement::Day),
-                    // PatternElement::Literal(", ".to_string()),
+                    PatternElement::Element(DatePatternElement::Month),
+                    PatternElement::Literal(" ".to_string()),
+                    PatternElement::Element(DatePatternElement::Day),
+                    PatternElement::Literal(", ".to_string()),
                     PatternElement::Element(DatePatternElement::Year),
                 ],
             },
