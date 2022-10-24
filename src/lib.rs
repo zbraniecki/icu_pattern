@@ -1,5 +1,9 @@
+pub mod data;
+pub mod datetime;
+pub mod output;
+pub mod parser;
 pub mod pattern;
-pub mod replacement;
+pub mod resolver;
 
 pub use pattern::{Pattern, PatternElement};
 
