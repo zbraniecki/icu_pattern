@@ -1,5 +1,4 @@
 use crate::output::{Output, OutputElement};
-use crate::resolver::Resolver;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Never;
@@ -21,13 +20,13 @@ pub enum PatternElement<E = Never> {
 
 pub trait Pattern<'output, E = Never> {
     type OutputElement: 'output;
-    type Resolver: Resolver<'output>;
+    type Provider;
     type Iter: Iterator<Item = Self::OutputElement>;
     type Scheme;
 
     fn resolve(
         &'output self,
-        resolver: &Self::Resolver,
+        provider: &'output Self::Provider,
         scheme: Option<Self::Scheme>,
     ) -> Self::Iter;
 }

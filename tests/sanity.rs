@@ -3,7 +3,6 @@ use icu_pattern::datetime::{
         DateOutput, DateOutputElement, DateTimeOutput, DateTimeOutputElement, TimeOutput,
         TimeOutputElement, TimezoneOutput, TimezoneOutputElement,
     },
-    resolver::{DateResolver, DateTimeResolver, TimeResolver, TimezoneResolver},
     types::{
         DatePatternElement, TimePatternElement, TimezonePatternElement,
         TimezonePatternPlaceholderScheme, TimezonePatternVariant,
@@ -17,9 +16,8 @@ use std::borrow::Cow;
 fn core_date_test() {
     let data = DateTimeData::default();
     let pattern = data.get_date_pattern();
-    let resolver = DateResolver::new(&data);
 
-    let elements = pattern.resolve(&resolver, None);
+    let elements = pattern.resolve(&data, None);
     let output = DateOutput {
         elements: elements.collect(),
     };
@@ -46,9 +44,8 @@ fn core_date_test() {
 fn core_time_test() {
     let data = DateTimeData::default();
     let pattern = data.get_time_pattern();
-    let resolver = TimeResolver::new(&data);
 
-    let elements = pattern.resolve(&resolver, None);
+    let elements = pattern.resolve(&data, None);
 
     let output = TimeOutput {
         elements: elements.collect(),
@@ -78,9 +75,8 @@ fn core_timezone_test() {
     let data = DateTimeData::default();
     let variant = TimezonePatternVariant::Format;
     let (pattern, scheme) = data.get_timezone_pattern(variant);
-    let resolver = TimezoneResolver::new(&data);
 
-    let elements = pattern.resolve(&resolver, scheme);
+    let elements = pattern.resolve(&data, scheme);
 
     let output = TimezoneOutput {
         elements: elements.collect(),
@@ -106,11 +102,10 @@ fn core_timezone_fallback_test() {
     let data = DateTimeData::default();
     let variant = TimezonePatternVariant::FallbackFormat;
     let (pattern, scheme) = data.get_timezone_pattern(variant);
-    let resolver = TimezoneResolver::new(&data);
 
     let mut output = TimezoneOutput::default();
 
-    let elements = pattern.resolve(&resolver, scheme);
+    let elements = pattern.resolve(&data, scheme);
 
     let output = TimezoneOutput {
         elements: elements.collect(),
@@ -144,9 +139,8 @@ fn core_timezone_fallback_test() {
 fn core_datetime_test() {
     let data = DateTimeData::default();
     let pattern = data.get_datetime_pattern();
-    let resolver = DateTimeResolver::new(&data);
 
-    let elements = pattern.resolve(&resolver, None);
+    let elements = pattern.resolve(&data, None);
 
     let output = DateTimeOutput {
         elements: elements.collect(),

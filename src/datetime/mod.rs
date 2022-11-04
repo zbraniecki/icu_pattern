@@ -1,5 +1,4 @@
 pub mod output;
-pub mod resolver;
 mod schema;
 mod source;
 pub mod types;
