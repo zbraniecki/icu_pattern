@@ -42,104 +42,104 @@ fn core_date_test() {
     assert_eq!(output, expected);
 }
 
-// #[test]
-// fn core_time_test() {
-//     let data = DateTimeData::default();
-//     let pattern = data.get_time_pattern();
-//     let resolver = TimeResolver::new(&data);
-//
-//     let elements = pattern.resolve(&resolver, None);
-//
-//     let output = TimeOutput {
-//         elements: elements.collect(),
-//     };
-//
-//     let expected = TimeOutput {
-//         elements: vec![
-//             TimeOutputElement::Time(&TimePatternElement::Hour),
-//             TimeOutputElement::Literal(":"),
-//             TimeOutputElement::Time(&TimePatternElement::Minute),
-//             TimeOutputElement::Literal(" "),
-//             TimeOutputElement::Literal("America/Los_Angeles"),
-//             TimeOutputElement::Literal(" Time"),
-//         ],
-//         // ranges: vec![
-//         //     OutputRange {
-//         //         role: OutputRole::Date,
-//         //         range: 0..5,
-//         //     },
-//         // ],
-//     };
-//     assert_eq!(output, expected);
-// }
-//
-// #[test]
-// fn core_timezone_test() {
-//     let data = DateTimeData::default();
-//     let variant = TimezonePatternVariant::Format;
-//     let (pattern, scheme) = data.get_timezone_pattern(variant);
-//     let resolver = TimezoneResolver::new(&data);
-//
-//     let elements = pattern.resolve(&resolver, scheme);
-//
-//     let output = TimezoneOutput {
-//         elements: elements.collect(),
-//     };
-//
-//     let expected = TimezoneOutput {
-//         elements: vec![
-//             TimezoneOutputElement::Literal("America/Los_Angeles"),
-//             TimezoneOutputElement::Literal(" Time"),
-//         ],
-//         // ranges: vec![
-//         //     OutputRange {
-//         //         role: OutputRole::Date,
-//         //         range: 0..5,
-//         //     },
-//         // ],
-//     };
-//     assert_eq!(output, expected);
-// }
-//
-// #[test]
-// fn core_timezone_fallback_test() {
-//     let data = DateTimeData::default();
-//     let variant = TimezonePatternVariant::FallbackFormat;
-//     let (pattern, scheme) = data.get_timezone_pattern(variant);
-//     let resolver = TimezoneResolver::new(&data);
-//
-//     let mut output = TimezoneOutput::default();
-//
-//     let elements = pattern.resolve(&resolver, scheme);
-//
-//     let output = TimezoneOutput {
-//         elements: elements.collect(),
-//     };
-//
-//     let expected = TimezoneOutput {
-//         elements: vec![
-//             TimezoneOutputElement::Literal("America/Los_Angeles"),
-//             TimezoneOutputElement::Literal(" ("),
-//             TimezoneOutputElement::Literal("+"),
-//             TimezoneOutputElement::Timezone(&TimezonePatternElement::Time(
-//                 TimePatternElement::Hour,
-//             )),
-//             TimezoneOutputElement::Literal(":"),
-//             TimezoneOutputElement::Timezone(&TimezonePatternElement::Time(
-//                 TimePatternElement::Minute,
-//             )),
-//             TimezoneOutputElement::Literal(")"),
-//         ],
-//         // ranges: vec![
-//         //     OutputRange {
-//         //         role: OutputRole::Date,
-//         //         range: 0..5,
-//         //     },
-//         // ],
-//     };
-//     assert_eq!(output, expected);
-// }
-//
+#[test]
+fn core_time_test() {
+    let data = DateTimeData::default();
+    let pattern = data.get_time_pattern();
+    let resolver = TimeResolver::new(&data);
+
+    let elements = pattern.resolve(&resolver, None);
+
+    let output = TimeOutput {
+        elements: elements.collect(),
+    };
+
+    let expected = TimeOutput {
+        elements: vec![
+            TimeOutputElement::Time(Cow::Borrowed(&TimePatternElement::Hour)),
+            TimeOutputElement::Literal(Cow::Borrowed(":")),
+            TimeOutputElement::Time(Cow::Borrowed(&TimePatternElement::Minute)),
+            TimeOutputElement::Literal(Cow::Borrowed(" ")),
+            TimeOutputElement::Timezone(Cow::Borrowed(&TimezonePatternElement::Name)),
+            TimeOutputElement::Literal(Cow::Borrowed(" Time")),
+        ],
+        // ranges: vec![
+        //     OutputRange {
+        //         role: OutputRole::Date,
+        //         range: 0..5,
+        //     },
+        // ],
+    };
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn core_timezone_test() {
+    let data = DateTimeData::default();
+    let variant = TimezonePatternVariant::Format;
+    let (pattern, scheme) = data.get_timezone_pattern(variant);
+    let resolver = TimezoneResolver::new(&data);
+
+    let elements = pattern.resolve(&resolver, scheme);
+
+    let output = TimezoneOutput {
+        elements: elements.collect(),
+    };
+
+    let expected = TimezoneOutput {
+        elements: vec![
+            TimezoneOutputElement::Timezone(Cow::Borrowed(&TimezonePatternElement::Name)),
+            TimezoneOutputElement::Literal(Cow::Borrowed(" Time")),
+        ],
+        // ranges: vec![
+        //     OutputRange {
+        //         role: OutputRole::Date,
+        //         range: 0..5,
+        //     },
+        // ],
+    };
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn core_timezone_fallback_test() {
+    let data = DateTimeData::default();
+    let variant = TimezonePatternVariant::FallbackFormat;
+    let (pattern, scheme) = data.get_timezone_pattern(variant);
+    let resolver = TimezoneResolver::new(&data);
+
+    let mut output = TimezoneOutput::default();
+
+    let elements = pattern.resolve(&resolver, scheme);
+
+    let output = TimezoneOutput {
+        elements: elements.collect(),
+    };
+
+    let expected = TimezoneOutput {
+        elements: vec![
+            TimezoneOutputElement::Timezone(Cow::Borrowed(&TimezonePatternElement::Name)),
+            TimezoneOutputElement::Literal(Cow::Borrowed(" (")),
+            TimezoneOutputElement::Literal(Cow::Borrowed("+")),
+            TimezoneOutputElement::Timezone(Cow::Borrowed(&TimezonePatternElement::Time(
+                TimePatternElement::Hour,
+            ))),
+            TimezoneOutputElement::Literal(Cow::Borrowed(":")),
+            TimezoneOutputElement::Timezone(Cow::Borrowed(&TimezonePatternElement::Time(
+                TimePatternElement::Minute,
+            ))),
+            TimezoneOutputElement::Literal(Cow::Borrowed(")")),
+        ],
+        // ranges: vec![
+        //     OutputRange {
+        //         role: OutputRole::Date,
+        //         range: 0..5,
+        //     },
+        // ],
+    };
+    assert_eq!(output, expected);
+}
+
 #[test]
 fn core_datetime_test() {
     let data = DateTimeData::default();
