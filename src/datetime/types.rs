@@ -109,9 +109,11 @@ impl TryFrom<char> for TimePatternElement {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TimeRole {
     Hour,
     Minute,
+    Second,
     Timezone,
 }
 
@@ -126,12 +128,14 @@ impl<'output> Pattern<'output, TimePatternElement> for Vec<PatternElement<TimePa
         &'output self,
         provider: &'output Self::Provider,
         _scheme: Option<Self::Scheme>,
-        ranges: Option<&mut RangeList<Self::OutputRole>>,
+        ranges: Option<&'output mut RangeList<Self::OutputRole>>,
     ) -> Self::Iter {
         TimePatternIterator {
             elements: self.iter(),
             data: provider,
             timezone: None,
+            ranges,
+            idx: 0,
         }
     }
 }
@@ -139,14 +143,17 @@ impl<'output> Pattern<'output, TimePatternElement> for Vec<PatternElement<TimePa
 pub struct TimePatternIterator<'output> {
     pub elements: std::slice::Iter<'output, PatternElement<TimePatternElement>>,
     pub data: &'output DateTimeData,
-    pub timezone: Option<TimezonePatternIterator<'output>>,
+    pub timezone: Option<(TimezonePatternIterator<'output>, usize)>,
+    pub ranges: Option<&'output mut RangeList<TimeRole>>,
+    pub idx: usize,
 }
 
 impl<'output> Iterator for TimePatternIterator<'output> {
     type Item = TimeOutputElement<'output>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(ref mut tz) = self.timezone {
+        self.idx += 1;
+        if let Some((ref mut tz, idx)) = self.timezone {
             if let Some(item) = tz.next() {
                 match item {
                     TimezoneOutputElement::Literal(l) => {
@@ -160,6 +167,12 @@ impl<'output> Iterator for TimePatternIterator<'output> {
                     }
                 }
             } else {
+                if let Some(ref mut ranges) = self.ranges {
+                    ranges.push(Range {
+                        role: TimeRole::Timezone,
+                        range: idx..self.idx,
+                    });
+                }
                 self.timezone = None;
             }
         }
@@ -170,13 +183,24 @@ impl<'output> Iterator for TimePatternIterator<'output> {
                     let (pattern, scheme) = self.data.get_timezone_pattern(variant);
                     let mut iter = pattern.resolve(self.data, scheme, None);
                     let item = iter.next().unwrap();
-                    self.timezone = Some(iter);
+                    self.timezone = Some((iter, self.idx - 1));
                     match item {
                         TimezoneOutputElement::Literal(l) => TimeOutputElement::Literal(l),
                         TimezoneOutputElement::Timezone(t) => TimeOutputElement::Timezone(t),
                         TimezoneOutputElement::Time(t) => TimeOutputElement::Time(t),
                     }
                 } else {
+                    if let Some(ranges) = &mut self.ranges {
+                        let role = match e {
+                            TimePatternElement::Hour => TimeRole::Hour,
+                            TimePatternElement::Minute => TimeRole::Minute,
+                            _ => unreachable!(),
+                        };
+                        ranges.push(Range {
+                            role,
+                            range: self.idx - 1..self.idx,
+                        });
+                    }
                     TimeOutputElement::Time(Cow::Borrowed(e))
                 }
             }
@@ -213,11 +237,13 @@ pub enum TimezonePatternVariant {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum TimezonePatternPlaceholderScheme {
     Name,
-    NameOffset,
+    Offset,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TimezoneRole {
     Name,
+    Offset,
 }
 
 impl<'output> Pattern<'output, TimezonePatternElement>
@@ -233,32 +259,43 @@ impl<'output> Pattern<'output, TimezonePatternElement>
         &'output self,
         provider: &'output Self::Provider,
         scheme: Option<Self::Scheme>,
-        ranges: Option<&mut RangeList<Self::OutputRole>>,
+        ranges: Option<&'output mut RangeList<Self::OutputRole>>,
     ) -> Self::Iter {
         TimezonePatternIterator {
             elements: self.iter(),
             time: None,
             data: provider,
             scheme,
+            ranges,
+            idx: 0,
         }
     }
 }
 
 pub struct TimezonePatternIterator<'output> {
     pub elements: std::slice::Iter<'output, PatternElement<TimezonePatternElement>>,
-    pub time: Option<Box<TimezonePatternIterator<'output>>>,
+    pub time: Option<(Box<TimezonePatternIterator<'output>>, usize)>,
     pub data: &'output DateTimeData,
     pub scheme: Option<TimezonePatternPlaceholderScheme>,
+    pub ranges: Option<&'output mut RangeList<TimezoneRole>>,
+    pub idx: usize,
 }
 
 impl<'output> Iterator for TimezonePatternIterator<'output> {
     type Item = TimezoneOutputElement<'output>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(ref mut time) = self.time {
+        self.idx += 1;
+        if let Some((ref mut time, idx)) = self.time {
             if let Some(item) = time.next() {
                 return Some(item);
             } else {
+                if let Some(ref mut ranges) = self.ranges {
+                    ranges.push(Range {
+                        role: TimezoneRole::Offset,
+                        range: idx..self.idx - 1,
+                    });
+                }
                 self.time = None;
             }
         }
@@ -270,10 +307,16 @@ impl<'output> Iterator for TimezonePatternIterator<'output> {
                     if self.scheme == Some(TimezonePatternPlaceholderScheme::Name) =>
                 {
                     assert_eq!(*p, 0usize);
+                    if let Some(ref mut ranges) = self.ranges {
+                        ranges.push(Range {
+                            role: TimezoneRole::Name,
+                            range: self.idx - 1..self.idx,
+                        });
+                    }
                     TimezoneOutputElement::Timezone(Cow::Owned(TimezonePatternElement::Name))
                 }
                 PatternElement::Placeholder(p)
-                    if self.scheme == Some(TimezonePatternPlaceholderScheme::NameOffset) =>
+                    if self.scheme == Some(TimezonePatternPlaceholderScheme::Offset) =>
                 {
                     match *p {
                         0 => {
@@ -281,12 +324,20 @@ impl<'output> Iterator for TimezonePatternIterator<'output> {
                             let (pattern, scheme) = self.data.get_timezone_pattern(variant);
                             let mut iter = pattern.resolve(self.data, scheme, None);
                             let item = iter.next().unwrap();
-                            self.time = Some(Box::new(iter));
+                            self.time = Some((Box::new(iter), self.idx - 1));
                             item
                         }
-                        1 => TimezoneOutputElement::Timezone(Cow::Owned(
-                            TimezonePatternElement::Name,
-                        )),
+                        1 => {
+                            if let Some(ref mut ranges) = self.ranges {
+                                ranges.push(Range {
+                                    role: TimezoneRole::Name,
+                                    range: self.idx - 1..self.idx,
+                                });
+                            }
+                            TimezoneOutputElement::Timezone(Cow::Owned(
+                                TimezonePatternElement::Name,
+                            ))
+                        }
                         _ => {
                             unreachable!()
                         }
@@ -316,6 +367,7 @@ impl TryFrom<char> for DateTimePatternElement {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum DateTimeRole {
     Date,
     Time,

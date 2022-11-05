@@ -74,7 +74,7 @@ impl DateTimeData {
             TimezonePatternVariant::HourFormat => (&self.data.timezone.hour_format, None),
             TimezonePatternVariant::FallbackFormat => (
                 &self.data.timezone.fallback_format,
-                Some(TimezonePatternPlaceholderScheme::NameOffset),
+                Some(TimezonePatternPlaceholderScheme::Offset),
             ),
         }
     }
