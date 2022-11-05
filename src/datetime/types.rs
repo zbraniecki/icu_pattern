@@ -343,7 +343,7 @@ impl<'output> Iterator for TimezonePatternIterator<'output> {
                         }
                     }
                 }
-                PatternElement::Placeholder(p) => {
+                PatternElement::Placeholder(_) => {
                     unreachable!()
                 }
             }
@@ -386,29 +386,34 @@ impl<'output> Pattern<'output, DateTimePatternElement>
         &'output self,
         provider: &'output Self::Provider,
         _scheme: Option<Self::Scheme>,
-        ranges: Option<&mut RangeList<Self::OutputRole>>,
+        ranges: Option<&'output mut RangeList<Self::OutputRole>>,
     ) -> Self::Iter {
         DateTimePatternIterator {
             elements: self.iter(),
             date: None,
             time: None,
             data: provider,
+            ranges,
+            idx: 0,
         }
     }
 }
 
 pub struct DateTimePatternIterator<'output> {
     pub elements: std::slice::Iter<'output, PatternElement<DateTimePatternElement>>,
-    pub date: Option<Box<DatePatternIterator<'output>>>,
-    pub time: Option<Box<TimePatternIterator<'output>>>,
+    pub date: Option<(Box<DatePatternIterator<'output>>, usize)>,
+    pub time: Option<(Box<TimePatternIterator<'output>>, usize)>,
     pub data: &'output DateTimeData,
+    pub ranges: Option<&'output mut RangeList<DateTimeRole>>,
+    pub idx: usize,
 }
 
 impl<'output> Iterator for DateTimePatternIterator<'output> {
     type Item = DateTimeOutputElement<'output>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(ref mut date) = self.date {
+        self.idx += 1;
+        if let Some((ref mut date, idx)) = self.date {
             if let Some(item) = date.next() {
                 match item {
                     DateOutputElement::Literal(l) => {
@@ -419,11 +424,17 @@ impl<'output> Iterator for DateTimePatternIterator<'output> {
                     }
                 }
             } else {
+                if let Some(ref mut ranges) = self.ranges {
+                    ranges.push(Range {
+                        role: DateTimeRole::Date,
+                        range: idx..self.idx - 1,
+                    });
+                }
                 self.date = None;
             }
         }
 
-        if let Some(ref mut time) = self.time {
+        if let Some((ref mut time, idx)) = self.time {
             if let Some(item) = time.next() {
                 match item {
                     TimeOutputElement::Literal(l) => {
@@ -437,6 +448,12 @@ impl<'output> Iterator for DateTimePatternIterator<'output> {
                     }
                 }
             } else {
+                if let Some(ref mut ranges) = self.ranges {
+                    ranges.push(Range {
+                        role: DateTimeRole::Time,
+                        range: idx..self.idx - 1,
+                    });
+                }
                 self.time = None;
             }
         }
@@ -450,7 +467,7 @@ impl<'output> Iterator for DateTimePatternIterator<'output> {
                         let pattern = self.data.get_time_pattern();
                         let mut iter = pattern.resolve(self.data, None, None);
                         let item = iter.next().unwrap();
-                        self.time = Some(Box::new(iter));
+                        self.time = Some((Box::new(iter), self.idx - 1));
                         match item {
                             TimeOutputElement::Literal(l) => {
                                 Some(DateTimeOutputElement::Literal(l))
@@ -465,7 +482,7 @@ impl<'output> Iterator for DateTimePatternIterator<'output> {
                         let pattern = self.data.get_date_pattern();
                         let mut iter = pattern.resolve(self.data, None, None);
                         let item = iter.next().unwrap();
-                        self.date = Some(Box::new(iter));
+                        self.date = Some((Box::new(iter), self.idx - 1));
                         match item {
                             DateOutputElement::Literal(l) => {
                                 Some(DateTimeOutputElement::Literal(l))

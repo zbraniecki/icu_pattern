@@ -11,7 +11,7 @@ fn pattern_benches(c: &mut Criterion) {
     group.bench_function("overview", |b| {
         b.iter(|| {
             let elements = pattern.resolve(&data, None, None);
-            let _ = elements.count();
+            let _ = black_box(elements).count();
         })
     });
     group.finish();

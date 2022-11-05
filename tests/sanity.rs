@@ -5,13 +5,11 @@ use icu_pattern::datetime::{
     },
     types::{
         DatePatternElement, DateRole, DateTimeRole, TimePatternElement, TimeRole,
-        TimezonePatternElement, TimezonePatternPlaceholderScheme, TimezonePatternVariant,
-        TimezoneRole,
+        TimezonePatternElement, TimezonePatternVariant, TimezoneRole,
     },
     DateTimeData,
 };
 use icu_pattern::{
-    output::Output,
     pattern::Pattern,
     ranges::{Range, RangeList},
 };
@@ -140,8 +138,6 @@ fn core_timezone_fallback_test() {
     let variant = TimezonePatternVariant::FallbackFormat;
     let (pattern, scheme) = data.get_timezone_pattern(variant);
 
-    let mut output = TimezoneOutput::default();
-
     let mut ranges = RangeList::new();
 
     let elements = pattern.resolve(&data, scheme, Some(&mut ranges));
@@ -180,51 +176,48 @@ fn core_timezone_fallback_test() {
     assert_eq!(output, expected);
     assert_eq!(ranges, expected_ranges);
 }
-//
-// #[test]
-// fn core_datetime_test() {
-//     let data = DateTimeData::default();
-//     let pattern = data.get_datetime_pattern();
-//
-//     let elements = pattern.resolve(&data, None);
-//
-//     let output = DateTimeOutput {
-//         elements: elements.collect(),
-//     };
-//
-//     let expected = DateTimeOutput {
-//         elements: vec![
-//             DateTimeOutputElement::Date(Cow::Borrowed(&DatePatternElement::Month)),
-//             DateTimeOutputElement::Literal(" ".into()),
-//             DateTimeOutputElement::Date(Cow::Borrowed(&DatePatternElement::Day)),
-//             DateTimeOutputElement::Literal(", ".into()),
-//             DateTimeOutputElement::Date(Cow::Borrowed(&DatePatternElement::Year)),
-//             DateTimeOutputElement::Literal(" at ".into()),
-//             DateTimeOutputElement::Time(Cow::Borrowed(&TimePatternElement::Hour)),
-//             DateTimeOutputElement::Literal(":".into()),
-//             DateTimeOutputElement::Time(Cow::Borrowed(&TimePatternElement::Minute)),
-//             DateTimeOutputElement::Literal(" ".into()),
-//             DateTimeOutputElement::Timezone(Cow::Owned(TimezonePatternElement::Name)),
-//             DateTimeOutputElement::Literal(" Time".into()),
-//         ],
-//         // ranges: vec![
-//         //     OutputRange {
-//         //         role: OutputRole::Date,
-//         //         range: 0..5,
-//         //     },
-//         //     OutputRange {
-//         //         role: OutputRole::Timezone,
-//         //         range: 10..12,
-//         //     },
-//         //     OutputRange {
-//         //         role: OutputRole::Time,
-//         //         range: 6..12,
-//         //     },
-//         //     OutputRange {
-//         //         role: OutputRole::DateTime,
-//         //         range: 0..12,
-//         //     },
-//         // ],
-//     };
-//     assert_eq!(output, expected);
-// }
+
+#[test]
+fn core_datetime_test() {
+    let data = DateTimeData::default();
+    let pattern = data.get_datetime_pattern();
+
+    let mut ranges = RangeList::new();
+
+    let elements = pattern.resolve(&data, None, Some(&mut ranges));
+
+    let output = DateTimeOutput {
+        elements: elements.collect(),
+    };
+
+    let expected = DateTimeOutput {
+        elements: vec![
+            DateTimeOutputElement::Date(Cow::Borrowed(&DatePatternElement::Month)),
+            DateTimeOutputElement::Literal(" ".into()),
+            DateTimeOutputElement::Date(Cow::Borrowed(&DatePatternElement::Day)),
+            DateTimeOutputElement::Literal(", ".into()),
+            DateTimeOutputElement::Date(Cow::Borrowed(&DatePatternElement::Year)),
+            DateTimeOutputElement::Literal(" at ".into()),
+            DateTimeOutputElement::Time(Cow::Borrowed(&TimePatternElement::Hour)),
+            DateTimeOutputElement::Literal(":".into()),
+            DateTimeOutputElement::Time(Cow::Borrowed(&TimePatternElement::Minute)),
+            DateTimeOutputElement::Literal(" ".into()),
+            DateTimeOutputElement::Timezone(Cow::Owned(TimezonePatternElement::Name)),
+            DateTimeOutputElement::Literal(" Time".into()),
+        ],
+    };
+    let expected_ranges = RangeList {
+        elements: SmallVec::from_vec(vec![
+            Range {
+                role: DateTimeRole::Date,
+                range: 0..5,
+            },
+            Range {
+                role: DateTimeRole::Time,
+                range: 6..12,
+            },
+        ]),
+    };
+    assert_eq!(output, expected);
+    assert_eq!(ranges, expected_ranges);
+}

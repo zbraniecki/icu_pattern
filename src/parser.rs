@@ -83,7 +83,7 @@ impl Parser {
         }
     }
 
-    fn get_token<E>(ch: char, count: usize) -> Option<PatternElement<E>>
+    fn get_token<E>(ch: char, _count: usize) -> Option<PatternElement<E>>
     where
         E: TryFrom<char>,
     {
