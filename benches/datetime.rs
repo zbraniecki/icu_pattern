@@ -1,17 +1,16 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use icu_pattern::datetime::{resolver::DateTimeResolver, DateTimeData};
+use icu_pattern::datetime::DateTimeData;
 use icu_pattern::Pattern;
 
 fn pattern_benches(c: &mut Criterion) {
     let data = DateTimeData::default();
     let pattern = data.get_datetime_pattern();
-    let resolver = DateTimeResolver::new(&data);
 
     let mut group = c.benchmark_group("datetime");
 
     group.bench_function("overview", |b| {
         b.iter(|| {
-            let elements = pattern.resolve(&resolver, None);
+            let elements = pattern.resolve(&data, None, None);
             let _ = elements.count();
         })
     });

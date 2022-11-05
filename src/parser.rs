@@ -1,4 +1,4 @@
-use crate::pattern::{Pattern, PatternElement};
+use crate::pattern::PatternElement;
 
 pub struct Parser {}
 

@@ -1,4 +1,4 @@
-use crate::output::{Output, OutputElement};
+use crate::ranges::RangeList;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Never;
@@ -23,10 +23,12 @@ pub trait Pattern<'output, E = Never> {
     type Provider;
     type Iter: Iterator<Item = Self::OutputElement>;
     type Scheme;
+    type OutputRole;
 
     fn resolve(
         &'output self,
         provider: &'output Self::Provider,
         scheme: Option<Self::Scheme>,
+        ranges: Option<&'output mut RangeList<Self::OutputRole>>,
     ) -> Self::Iter;
 }

@@ -3,11 +3,7 @@ mod schema;
 mod source;
 pub mod types;
 
-use crate::{
-    parser::Parser,
-    // data::PatternSource,
-    pattern::{Pattern, PatternElement},
-};
+use crate::{parser::Parser, pattern::PatternElement};
 use schema::*;
 use source::*;
 use types::*;
