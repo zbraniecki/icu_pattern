@@ -35,18 +35,20 @@ pub enum DateRole {
     Year,
 }
 
-impl<'output> Pattern<'output, DatePatternElement> for Vec<PatternElement<DatePatternElement>> {
-    type OutputElement = DateOutputElement<'output>;
-    type Provider = DateTimeData;
-    type Iter = DatePatternIterator<'output>;
+impl<'input> Pattern<'input, DatePatternElement>
+    for Vec<PatternElement<'input, DatePatternElement>>
+{
+    type OutputElement = DateOutputElement<'input>;
+    type Provider = DateTimeData<'input>;
+    type Iter = DatePatternIterator<'input>;
     type Scheme = ();
     type OutputRole = DateRole;
 
     fn resolve(
-        &'output self,
+        &'input self,
         _provider: &Self::Provider,
         _scheme: Option<Self::Scheme>,
-        ranges: Option<&'output mut RangeList<Self::OutputRole>>,
+        ranges: Option<&'input mut RangeList<Self::OutputRole>>,
     ) -> Self::Iter {
         DatePatternIterator {
             elements: self.iter().enumerate(),
@@ -55,14 +57,14 @@ impl<'output> Pattern<'output, DatePatternElement> for Vec<PatternElement<DatePa
     }
 }
 
-pub struct DatePatternIterator<'output> {
+pub struct DatePatternIterator<'input> {
     pub elements:
-        std::iter::Enumerate<std::slice::Iter<'output, PatternElement<DatePatternElement>>>,
-    pub ranges: Option<&'output mut RangeList<DateRole>>,
+        std::iter::Enumerate<std::slice::Iter<'input, PatternElement<'input, DatePatternElement>>>,
+    pub ranges: Option<&'input mut RangeList<DateRole>>,
 }
 
-impl<'output> Iterator for DatePatternIterator<'output> {
-    type Item = DateOutputElement<'output>;
+impl<'input> Iterator for DatePatternIterator<'input> {
+    type Item = DateOutputElement<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.elements.next().map(|(idx, e)| match e {
@@ -80,7 +82,7 @@ impl<'output> Iterator for DatePatternIterator<'output> {
                 }
                 DateOutputElement::Date(Cow::Borrowed(e))
             }
-            PatternElement::Literal(l) => DateOutputElement::Literal(l.into()),
+            PatternElement::Literal(l) => DateOutputElement::Literal(l.clone()),
             PatternElement::Placeholder(_) => todo!(),
         })
     }
@@ -117,18 +119,20 @@ pub enum TimeRole {
     Timezone,
 }
 
-impl<'output> Pattern<'output, TimePatternElement> for Vec<PatternElement<TimePatternElement>> {
-    type OutputElement = TimeOutputElement<'output>;
-    type Provider = DateTimeData;
-    type Iter = TimePatternIterator<'output>;
+impl<'input> Pattern<'input, TimePatternElement>
+    for Vec<PatternElement<'input, TimePatternElement>>
+{
+    type OutputElement = TimeOutputElement<'input>;
+    type Provider = DateTimeData<'input>;
+    type Iter = TimePatternIterator<'input>;
     type Scheme = ();
     type OutputRole = TimeRole;
 
     fn resolve(
-        &'output self,
-        provider: &'output Self::Provider,
+        &'input self,
+        provider: &'input Self::Provider,
         _scheme: Option<Self::Scheme>,
-        ranges: Option<&'output mut RangeList<Self::OutputRole>>,
+        ranges: Option<&'input mut RangeList<Self::OutputRole>>,
     ) -> Self::Iter {
         TimePatternIterator {
             elements: self.iter(),
@@ -140,16 +144,16 @@ impl<'output> Pattern<'output, TimePatternElement> for Vec<PatternElement<TimePa
     }
 }
 
-pub struct TimePatternIterator<'output> {
-    pub elements: std::slice::Iter<'output, PatternElement<TimePatternElement>>,
-    pub data: &'output DateTimeData,
-    pub timezone: Option<(TimezonePatternIterator<'output>, usize)>,
-    pub ranges: Option<&'output mut RangeList<TimeRole>>,
+pub struct TimePatternIterator<'input> {
+    pub elements: std::slice::Iter<'input, PatternElement<'input, TimePatternElement>>,
+    pub data: &'input DateTimeData<'input>,
+    pub timezone: Option<(TimezonePatternIterator<'input>, usize)>,
+    pub ranges: Option<&'input mut RangeList<TimeRole>>,
     pub idx: usize,
 }
 
-impl<'output> Iterator for TimePatternIterator<'output> {
-    type Item = TimeOutputElement<'output>;
+impl<'input> Iterator for TimePatternIterator<'input> {
+    type Item = TimeOutputElement<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.idx += 1;
@@ -204,7 +208,7 @@ impl<'output> Iterator for TimePatternIterator<'output> {
                     TimeOutputElement::Time(Cow::Borrowed(e))
                 }
             }
-            PatternElement::Literal(l) => TimeOutputElement::Literal(l.into()),
+            PatternElement::Literal(l) => TimeOutputElement::Literal(l.clone()),
             PatternElement::Placeholder(_) => todo!(),
         })
     }
@@ -246,20 +250,20 @@ pub enum TimezoneRole {
     Offset,
 }
 
-impl<'output> Pattern<'output, TimezonePatternElement>
-    for Vec<PatternElement<TimezonePatternElement>>
+impl<'input> Pattern<'input, TimezonePatternElement>
+    for Vec<PatternElement<'input, TimezonePatternElement>>
 {
-    type OutputElement = TimezoneOutputElement<'output>;
-    type Provider = DateTimeData;
-    type Iter = TimezonePatternIterator<'output>;
+    type OutputElement = TimezoneOutputElement<'input>;
+    type Provider = DateTimeData<'input>;
+    type Iter = TimezonePatternIterator<'input>;
     type Scheme = TimezonePatternPlaceholderScheme;
     type OutputRole = TimezoneRole;
 
     fn resolve(
-        &'output self,
-        provider: &'output Self::Provider,
+        &'input self,
+        provider: &'input Self::Provider,
         scheme: Option<Self::Scheme>,
-        ranges: Option<&'output mut RangeList<Self::OutputRole>>,
+        ranges: Option<&'input mut RangeList<Self::OutputRole>>,
     ) -> Self::Iter {
         TimezonePatternIterator {
             elements: self.iter(),
@@ -272,17 +276,17 @@ impl<'output> Pattern<'output, TimezonePatternElement>
     }
 }
 
-pub struct TimezonePatternIterator<'output> {
-    pub elements: std::slice::Iter<'output, PatternElement<TimezonePatternElement>>,
-    pub time: Option<(Box<TimezonePatternIterator<'output>>, usize)>,
-    pub data: &'output DateTimeData,
+pub struct TimezonePatternIterator<'input> {
+    pub elements: std::slice::Iter<'input, PatternElement<'input, TimezonePatternElement>>,
+    pub time: Option<(Box<TimezonePatternIterator<'input>>, usize)>,
+    pub data: &'input DateTimeData<'input>,
     pub scheme: Option<TimezonePatternPlaceholderScheme>,
-    pub ranges: Option<&'output mut RangeList<TimezoneRole>>,
+    pub ranges: Option<&'input mut RangeList<TimezoneRole>>,
     pub idx: usize,
 }
 
-impl<'output> Iterator for TimezonePatternIterator<'output> {
-    type Item = TimezoneOutputElement<'output>;
+impl<'input> Iterator for TimezonePatternIterator<'input> {
+    type Item = TimezoneOutputElement<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.idx += 1;
@@ -302,7 +306,7 @@ impl<'output> Iterator for TimezonePatternIterator<'output> {
         self.elements.next().map(|e| -> TimezoneOutputElement {
             match e {
                 PatternElement::Element(e) => TimezoneOutputElement::Timezone(Cow::Borrowed(e)),
-                PatternElement::Literal(l) => TimezoneOutputElement::Literal(l.into()),
+                PatternElement::Literal(l) => TimezoneOutputElement::Literal(l.clone()),
                 PatternElement::Placeholder(p)
                     if self.scheme == Some(TimezonePatternPlaceholderScheme::Name) =>
                 {
@@ -373,20 +377,20 @@ pub enum DateTimeRole {
     Time,
 }
 
-impl<'output> Pattern<'output, DateTimePatternElement>
-    for Vec<PatternElement<DateTimePatternElement>>
+impl<'input> Pattern<'input, DateTimePatternElement>
+    for Vec<PatternElement<'input, DateTimePatternElement>>
 {
-    type OutputElement = DateTimeOutputElement<'output>;
-    type Provider = DateTimeData;
-    type Iter = DateTimePatternIterator<'output>;
+    type OutputElement = DateTimeOutputElement<'input>;
+    type Provider = DateTimeData<'input>;
+    type Iter = DateTimePatternIterator<'input>;
     type Scheme = ();
     type OutputRole = DateTimeRole;
 
     fn resolve(
-        &'output self,
-        provider: &'output Self::Provider,
+        &'input self,
+        provider: &'input Self::Provider,
         _scheme: Option<Self::Scheme>,
-        ranges: Option<&'output mut RangeList<Self::OutputRole>>,
+        ranges: Option<&'input mut RangeList<Self::OutputRole>>,
     ) -> Self::Iter {
         DateTimePatternIterator {
             elements: self.iter(),
@@ -399,17 +403,17 @@ impl<'output> Pattern<'output, DateTimePatternElement>
     }
 }
 
-pub struct DateTimePatternIterator<'output> {
-    pub elements: std::slice::Iter<'output, PatternElement<DateTimePatternElement>>,
-    pub date: Option<(Box<DatePatternIterator<'output>>, usize)>,
-    pub time: Option<(Box<TimePatternIterator<'output>>, usize)>,
-    pub data: &'output DateTimeData,
-    pub ranges: Option<&'output mut RangeList<DateTimeRole>>,
+pub struct DateTimePatternIterator<'input> {
+    pub elements: std::slice::Iter<'input, PatternElement<'input, DateTimePatternElement>>,
+    pub date: Option<(Box<DatePatternIterator<'input>>, usize)>,
+    pub time: Option<(Box<TimePatternIterator<'input>>, usize)>,
+    pub data: &'input DateTimeData<'input>,
+    pub ranges: Option<&'input mut RangeList<DateTimeRole>>,
     pub idx: usize,
 }
 
-impl<'output> Iterator for DateTimePatternIterator<'output> {
-    type Item = DateTimeOutputElement<'output>;
+impl<'input> Iterator for DateTimePatternIterator<'input> {
+    type Item = DateTimeOutputElement<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.idx += 1;
@@ -461,7 +465,7 @@ impl<'output> Iterator for DateTimePatternIterator<'output> {
         if let Some(element) = self.elements.next() {
             match element {
                 PatternElement::Element(_) => unreachable!(),
-                PatternElement::Literal(l) => Some(DateTimeOutputElement::Literal(l.into())),
+                PatternElement::Literal(l) => Some(DateTimeOutputElement::Literal(l.clone())),
                 PatternElement::Placeholder(p) => match p {
                     0 => {
                         let pattern = self.data.get_time_pattern();

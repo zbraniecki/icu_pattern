@@ -1,20 +1,20 @@
-pub struct SourceTimezone {
-    pub format: String,
-    pub hour_format: String,
-    pub fallback_format: String,
+pub struct SourceTimezone<'input> {
+    pub format: &'input str,
+    pub hour_format: &'input str,
+    pub fallback_format: &'input str,
 }
 
-pub struct SourceDate {
-    pub format: String,
-    pub date_combination: String,
+pub struct SourceDate<'input> {
+    pub format: &'input str,
+    pub date_combination: &'input str,
 }
 
-pub struct SourceTime {
-    pub format: String,
+pub struct SourceTime<'input> {
+    pub format: &'input str,
 }
 
-pub struct SourceData {
-    pub time: SourceTime,
-    pub date: SourceDate,
-    pub timezone: SourceTimezone,
+pub struct SourceData<'input> {
+    pub time: SourceTime<'input>,
+    pub date: SourceDate<'input>,
+    pub timezone: SourceTimezone<'input>,
 }

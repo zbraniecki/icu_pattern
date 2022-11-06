@@ -8,24 +8,24 @@ use schema::*;
 use source::*;
 use types::*;
 
-pub struct DateTimeData {
-    data: DataSchema,
+pub struct DateTimeData<'input> {
+    data: DataSchema<'input>,
 }
 
-impl Default for DateTimeData {
+impl<'input> Default for DateTimeData<'input> {
     fn default() -> Self {
         let source_data = SourceData {
             time: SourceTime {
-                format: "h:mm zzzz".to_string(),
+                format: "h:mm zzzz",
             },
             date: SourceDate {
-                format: "MMMM d, y".to_string(),
-                date_combination: "{1} 'at' {0}".to_string(),
+                format: "MMMM d, y",
+                date_combination: "{1} 'at' {0}",
             },
             timezone: SourceTimezone {
-                format: "{0} Time".to_string(),
-                hour_format: "+HH:mm".to_string(),
-                fallback_format: "{1} ({0})".to_string(),
+                format: "{0} Time",
+                hour_format: "+HH:mm",
+                fallback_format: "{1} ({0})",
             },
         };
         let data = DataSchema {
@@ -46,7 +46,7 @@ impl Default for DateTimeData {
     }
 }
 
-impl DateTimeData {
+impl<'input> DateTimeData<'input> {
     pub fn get_datetime_pattern(&self) -> &Vec<PatternElement<DateTimePatternElement>> {
         &self.data.date.date_combination
     }

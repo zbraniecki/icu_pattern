@@ -4,6 +4,18 @@ use icu_pattern::Pattern;
 
 fn pattern_benches(c: &mut Criterion) {
     let data = DateTimeData::default();
+    let pattern = data.get_date_pattern();
+
+    let mut group = c.benchmark_group("date");
+
+    group.bench_function("overview", |b| {
+        b.iter(|| {
+            let elements = pattern.resolve(&data, None, None);
+            let _ = black_box(elements).count();
+        })
+    });
+    group.finish();
+
     let pattern = data.get_datetime_pattern();
 
     let mut group = c.benchmark_group("datetime");

@@ -1,4 +1,5 @@
 use crate::ranges::RangeList;
+use std::borrow::Cow;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Never;
@@ -12,9 +13,9 @@ impl TryFrom<char> for Never {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum PatternElement<E = Never> {
+pub enum PatternElement<'input, E = Never> {
     Element(E),
-    Literal(String),
+    Literal(Cow<'input, str>),
     Placeholder(usize),
 }
 
