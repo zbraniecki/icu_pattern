@@ -82,7 +82,11 @@ impl<'input> Iterator for DatePatternIterator<'input> {
                 }
                 DateOutputElement::Date(Cow::Borrowed(e))
             }
-            PatternElement::Literal(l) => DateOutputElement::Literal(l.clone()),
+            PatternElement::Literal(l) => {
+                let s = l.as_ref().into();
+                debug_assert!(matches!(s, Cow::Borrowed(_)));
+                DateOutputElement::Literal(s)
+            }
             PatternElement::Placeholder(_) => todo!(),
         })
     }
@@ -208,7 +212,11 @@ impl<'input> Iterator for TimePatternIterator<'input> {
                     TimeOutputElement::Time(Cow::Borrowed(e))
                 }
             }
-            PatternElement::Literal(l) => TimeOutputElement::Literal(l.clone()),
+            PatternElement::Literal(l) => {
+                let s = l.as_ref().into();
+                debug_assert!(matches!(s, Cow::Borrowed(_)));
+                TimeOutputElement::Literal(s)
+            }
             PatternElement::Placeholder(_) => todo!(),
         })
     }
@@ -306,7 +314,11 @@ impl<'input> Iterator for TimezonePatternIterator<'input> {
         self.elements.next().map(|e| -> TimezoneOutputElement {
             match e {
                 PatternElement::Element(e) => TimezoneOutputElement::Timezone(Cow::Borrowed(e)),
-                PatternElement::Literal(l) => TimezoneOutputElement::Literal(l.clone()),
+                PatternElement::Literal(l) => {
+                    let s = l.as_ref().into();
+                    debug_assert!(matches!(s, Cow::Borrowed(_)));
+                    TimezoneOutputElement::Literal(s)
+                }
                 PatternElement::Placeholder(p)
                     if self.scheme == Some(TimezonePatternPlaceholderScheme::Name) =>
                 {
@@ -377,20 +389,20 @@ pub enum DateTimeRole {
     Time,
 }
 
-impl<'input> Pattern<'input, DateTimePatternElement>
-    for Vec<PatternElement<'input, DateTimePatternElement>>
+impl<'output> Pattern<'output, DateTimePatternElement>
+    for Vec<PatternElement<'output, DateTimePatternElement>>
 {
-    type OutputElement = DateTimeOutputElement<'input>;
-    type Provider = DateTimeData<'input>;
-    type Iter = DateTimePatternIterator<'input>;
+    type OutputElement = DateTimeOutputElement<'output>;
+    type Provider = DateTimeData<'output>;
+    type Iter = DateTimePatternIterator<'output>;
     type Scheme = ();
     type OutputRole = DateTimeRole;
 
     fn resolve(
-        &'input self,
-        provider: &'input Self::Provider,
+        &'output self,
+        provider: &'output Self::Provider,
         _scheme: Option<Self::Scheme>,
-        ranges: Option<&'input mut RangeList<Self::OutputRole>>,
+        ranges: Option<&'output mut RangeList<Self::OutputRole>>,
     ) -> Self::Iter {
         DateTimePatternIterator {
             elements: self.iter(),
@@ -403,17 +415,17 @@ impl<'input> Pattern<'input, DateTimePatternElement>
     }
 }
 
-pub struct DateTimePatternIterator<'input> {
-    pub elements: std::slice::Iter<'input, PatternElement<'input, DateTimePatternElement>>,
-    pub date: Option<(Box<DatePatternIterator<'input>>, usize)>,
-    pub time: Option<(Box<TimePatternIterator<'input>>, usize)>,
-    pub data: &'input DateTimeData<'input>,
-    pub ranges: Option<&'input mut RangeList<DateTimeRole>>,
+pub struct DateTimePatternIterator<'output> {
+    pub elements: std::slice::Iter<'output, PatternElement<'output, DateTimePatternElement>>,
+    pub date: Option<(Box<DatePatternIterator<'output>>, usize)>,
+    pub time: Option<(Box<TimePatternIterator<'output>>, usize)>,
+    pub data: &'output DateTimeData<'output>,
+    pub ranges: Option<&'output mut RangeList<DateTimeRole>>,
     pub idx: usize,
 }
 
-impl<'input> Iterator for DateTimePatternIterator<'input> {
-    type Item = DateTimeOutputElement<'input>;
+impl<'output> Iterator for DateTimePatternIterator<'output> {
+    type Item = DateTimeOutputElement<'output>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.idx += 1;
@@ -465,7 +477,11 @@ impl<'input> Iterator for DateTimePatternIterator<'input> {
         if let Some(element) = self.elements.next() {
             match element {
                 PatternElement::Element(_) => unreachable!(),
-                PatternElement::Literal(l) => Some(DateTimeOutputElement::Literal(l.clone())),
+                PatternElement::Literal(l) => {
+                    let s = l.as_ref().into();
+                    debug_assert!(matches!(s, Cow::Borrowed(_)));
+                    Some(DateTimeOutputElement::Literal(s))
+                }
                 PatternElement::Placeholder(p) => match p {
                     0 => {
                         let pattern = self.data.get_time_pattern();
