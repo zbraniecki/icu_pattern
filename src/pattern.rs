@@ -26,7 +26,7 @@ pub trait Pattern<'output, E = Never> {
     type Scheme;
     type OutputRole;
 
-    fn resolve(
+    fn interpolate(
         &'output self,
         provider: &'output Self::Provider,
         scheme: Option<Self::Scheme>,

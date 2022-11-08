@@ -44,7 +44,7 @@ impl<'input> Pattern<'input, DatePatternElement>
     type Scheme = ();
     type OutputRole = DateRole;
 
-    fn resolve(
+    fn interpolate(
         &'input self,
         _provider: &Self::Provider,
         _scheme: Option<Self::Scheme>,
@@ -132,7 +132,7 @@ impl<'input> Pattern<'input, TimePatternElement>
     type Scheme = ();
     type OutputRole = TimeRole;
 
-    fn resolve(
+    fn interpolate(
         &'input self,
         provider: &'input Self::Provider,
         _scheme: Option<Self::Scheme>,
@@ -189,7 +189,7 @@ impl<'input> Iterator for TimePatternIterator<'input> {
                 if *e == TimePatternElement::Timezone {
                     let variant = TimezonePatternVariant::Format;
                     let (pattern, scheme) = self.data.get_timezone_pattern(variant);
-                    let mut iter = pattern.resolve(self.data, scheme, None);
+                    let mut iter = pattern.interpolate(self.data, scheme, None);
                     let item = iter.next().unwrap();
                     self.timezone = Some((iter, self.idx - 1));
                     match item {
@@ -267,7 +267,7 @@ impl<'input> Pattern<'input, TimezonePatternElement>
     type Scheme = TimezonePatternPlaceholderScheme;
     type OutputRole = TimezoneRole;
 
-    fn resolve(
+    fn interpolate(
         &'input self,
         provider: &'input Self::Provider,
         scheme: Option<Self::Scheme>,
@@ -338,7 +338,7 @@ impl<'input> Iterator for TimezonePatternIterator<'input> {
                         0 => {
                             let variant = TimezonePatternVariant::HourFormat;
                             let (pattern, scheme) = self.data.get_timezone_pattern(variant);
-                            let mut iter = pattern.resolve(self.data, scheme, None);
+                            let mut iter = pattern.interpolate(self.data, scheme, None);
                             let item = iter.next().unwrap();
                             self.time = Some((Box::new(iter), self.idx - 1));
                             item
@@ -398,7 +398,7 @@ impl<'output> Pattern<'output, DateTimePatternElement>
     type Scheme = ();
     type OutputRole = DateTimeRole;
 
-    fn resolve(
+    fn interpolate(
         &'output self,
         provider: &'output Self::Provider,
         _scheme: Option<Self::Scheme>,
@@ -485,7 +485,7 @@ impl<'output> Iterator for DateTimePatternIterator<'output> {
                 PatternElement::Placeholder(p) => match p {
                     0 => {
                         let pattern = self.data.get_time_pattern();
-                        let mut iter = pattern.resolve(self.data, None, None);
+                        let mut iter = pattern.interpolate(self.data, None, None);
                         let item = iter.next().unwrap();
                         self.time = Some((Box::new(iter), self.idx - 1));
                         match item {
@@ -500,7 +500,7 @@ impl<'output> Iterator for DateTimePatternIterator<'output> {
                     }
                     1 => {
                         let pattern = self.data.get_date_pattern();
-                        let mut iter = pattern.resolve(self.data, None, None);
+                        let mut iter = pattern.interpolate(self.data, None, None);
                         let item = iter.next().unwrap();
                         self.date = Some((Box::new(iter), self.idx - 1));
                         match item {

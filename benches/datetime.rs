@@ -10,7 +10,7 @@ fn pattern_benches(c: &mut Criterion) {
 
     group.bench_function("overview", |b| {
         b.iter(|| {
-            let elements = pattern.resolve(&data, None, None);
+            let elements = pattern.interpolate(&data, None, None);
             let _ = black_box(elements).count();
         })
     });
@@ -22,7 +22,7 @@ fn pattern_benches(c: &mut Criterion) {
 
     group.bench_function("overview", |b| {
         b.iter(|| {
-            let elements = pattern.resolve(&data, None, None);
+            let elements = pattern.interpolate(&data, None, None);
             let _ = black_box(elements).count();
         })
     });

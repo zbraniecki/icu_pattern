@@ -23,7 +23,7 @@ fn core_date_test() {
 
     let mut ranges = RangeList::new();
 
-    let elements = pattern.resolve(&data, None, Some(&mut ranges));
+    let elements = pattern.interpolate(&data, None, Some(&mut ranges));
 
     let output = DateOutput {
         elements: elements.collect(),
@@ -65,7 +65,7 @@ fn core_time_test() {
 
     let mut ranges = RangeList::new();
 
-    let elements = pattern.resolve(&data, None, Some(&mut ranges));
+    let elements = pattern.interpolate(&data, None, Some(&mut ranges));
 
     let output = TimeOutput {
         elements: elements.collect(),
@@ -110,7 +110,7 @@ fn core_timezone_test() {
 
     let mut ranges = RangeList::new();
 
-    let elements = pattern.resolve(&data, scheme, Some(&mut ranges));
+    let elements = pattern.interpolate(&data, scheme, Some(&mut ranges));
 
     let output = TimezoneOutput {
         elements: elements.collect(),
@@ -140,7 +140,7 @@ fn core_timezone_fallback_test() {
 
     let mut ranges = RangeList::new();
 
-    let elements = pattern.resolve(&data, scheme, Some(&mut ranges));
+    let elements = pattern.interpolate(&data, scheme, Some(&mut ranges));
 
     let output = TimezoneOutput {
         elements: elements.collect(),
@@ -184,7 +184,7 @@ fn core_datetime_test() {
 
     let mut ranges = RangeList::new();
 
-    let elements = pattern.resolve(&data, None, Some(&mut ranges));
+    let elements = pattern.interpolate(&data, None, Some(&mut ranges));
 
     let output = DateTimeOutput {
         elements: elements.collect(),
