@@ -3,10 +3,6 @@ use icu_pattern::{
     RangeCollectorMarkerType, ReplacementProvider,
 };
 
-// struct MyDateRangeCollector {}
-
-// impl RangeCollector for MyDateRangeCollector {}
-
 /* Timezone */
 #[derive(PartialEq, Debug, Copy, Clone)]
 enum TimezonePatternItem {
