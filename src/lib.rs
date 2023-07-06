@@ -8,26 +8,38 @@ pub trait Labellable {
     fn get_label(&self) -> &'static str;
 }
 
-pub struct Pattern<Item>(pub Vec<PatternItem<Item>>);
+pub trait PatternIterator {
+    type Item;
+    fn next(&mut self) -> Option<PatternItem<Self::Item>>;
+}
 
-pub struct PatternIterator<'s, RP, RC, InputItem, OutputItem> {
+pub struct PatternInterpolator<'s, RP, RC, Iter, InputItem, OutputItem> {
     pub data: &'s RP,
-    pub iter: Box<dyn Iterator<Item = PatternItem<InputItem>> + 's>,
-    pub sub_iter: Option<(
-        InputItem,
-        Box<dyn Iterator<Item = PatternItem<OutputItem>> + 's>,
-    )>,
+    pub iter: Iter,
+    pub sub_iter: Option<(InputItem, Box<dyn PatternIterator<Item = OutputItem> + 's>)>,
     pub collector: Option<&'s mut RC>,
     pub idx: usize,
 }
 
-impl<'s, RP, RC, InputItem, OutputItem> PatternIterator<'s, RP, RC, InputItem, OutputItem>
+impl<'s, RP, RC, Iter, InputItem, OutputItem>
+    PatternInterpolator<'s, RP, RC, Iter, InputItem, OutputItem>
 where
     RP: ReplacementProvider<'s, RC, InputItem, OutputItem>,
     RC: RangeCollector,
+    Iter: PatternIterator<Item = InputItem>,
     OutputItem: From<InputItem>,
     InputItem: Copy + Labellable,
 {
+    pub fn new(data: &'s RP, iter: Iter) -> Self {
+        Self {
+            data,
+            iter,
+            sub_iter: None,
+            collector: None,
+            idx: 0,
+        }
+    }
+
     pub fn set_range_collector(&mut self, rc: &'s mut RC) {
         self.collector = Some(rc);
     }
@@ -72,17 +84,18 @@ where
     }
 }
 
-impl<'s, RP, RC, InputItem, OutputItem> Iterator
-    for PatternIterator<'s, RP, RC, InputItem, OutputItem>
+impl<'s, RP, RC, Iter, InputItem, OutputItem> PatternIterator
+    for PatternInterpolator<'s, RP, RC, Iter, InputItem, OutputItem>
 where
     RP: ReplacementProvider<'s, RC, InputItem, OutputItem>,
     RC: RangeCollector,
+    Iter: PatternIterator<Item = InputItem>,
     OutputItem: From<InputItem>,
     InputItem: Copy + Labellable,
 {
-    type Item = PatternItem<OutputItem>;
+    type Item = OutputItem;
 
-    fn next(&mut self) -> Option<Self::Item> {
+    fn next(&mut self) -> Option<PatternItem<Self::Item>> {
         self.get_next()
     }
 }
@@ -91,7 +104,7 @@ pub trait ReplacementProvider<'s, RC, Key, OutputItem> {
     fn get_replacement(
         &'s self,
         key: Key,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<OutputItem>> + 's>>;
+    ) -> Option<Box<dyn PatternIterator<Item = OutputItem> + 's>>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

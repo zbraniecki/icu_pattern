@@ -1,6 +1,6 @@
 use icu_pattern::{
-    Labellable, Pattern, PatternItem, PatternIterator, RangeCollector, RangeCollectorMarker,
-    RangeCollectorMarkerType, ReplacementProvider,
+    Labellable, PatternInterpolator, PatternItem, PatternIterator, RangeCollector,
+    RangeCollectorMarker, RangeCollectorMarkerType, ReplacementProvider,
 };
 
 /* Timezone */
@@ -153,6 +153,20 @@ impl From<TimezonePatternItem> for DateTimePatternResolvedItem {
     }
 }
 
+struct Pattern<Item>(pub Vec<PatternItem<Item>>);
+
+struct MyPatternIterator<Item> {
+    pub iter: std::vec::IntoIter<PatternItem<Item>>,
+}
+
+impl<Item> PatternIterator for MyPatternIterator<Item> {
+    type Item = Item;
+
+    fn next(&mut self) -> Option<PatternItem<Self::Item>> {
+        self.iter.next()
+    }
+}
+
 struct MyData {
     date_time: Pattern<DateTimePatternItem>,
     date: Pattern<DatePatternItem>,
@@ -160,93 +174,48 @@ struct MyData {
     timezone: Pattern<TimezonePatternItem>,
 }
 
-trait PatternGetter<InputItem, OutputItem> {
-    fn get_pattern<RC>(&self) -> Option<PatternIterator<Self, RC, InputItem, OutputItem>>
-    where
-        Self: Sized;
+trait PatternGetter<InputItem> {
+    type Iter: PatternIterator<Item = InputItem>;
+
+    fn get_pattern(&self) -> Option<Self::Iter>;
 }
 
-impl PatternGetter<TimezonePatternItem, TimezonePatternResolvedItem> for MyData {
-    fn get_pattern<RC>(
-        &self,
-    ) -> Option<PatternIterator<Self, RC, TimezonePatternItem, TimezonePatternResolvedItem>>
-    where
-        Self: Sized,
-    {
-        Some(PatternIterator {
-            data: self,
-            iter: Box::new(self.timezone.0.clone().into_iter()),
-            sub_iter: None,
-            collector: None,
-            idx: 0,
+impl PatternGetter<TimezonePatternItem> for MyData {
+    type Iter = MyPatternIterator<TimezonePatternItem>;
+
+    fn get_pattern(&self) -> Option<Self::Iter> {
+        Some(MyPatternIterator {
+            iter: self.timezone.0.clone().into_iter(),
         })
     }
 }
 
-impl PatternGetter<TimePatternItem, TimePatternResolvedItem> for MyData {
-    fn get_pattern<RC>(
-        &self,
-    ) -> Option<PatternIterator<Self, RC, TimePatternItem, TimePatternResolvedItem>>
-    where
-        Self: Sized,
-    {
-        Some(PatternIterator {
-            data: self,
-            iter: Box::new(self.time.0.clone().into_iter()),
-            sub_iter: None,
-            collector: None,
-            idx: 0,
+impl PatternGetter<TimePatternItem> for MyData {
+    type Iter = MyPatternIterator<TimePatternItem>;
+
+    fn get_pattern(&self) -> Option<Self::Iter> {
+        Some(MyPatternIterator {
+            iter: self.time.0.clone().into_iter(),
         })
     }
 }
 
-impl PatternGetter<DatePatternItem, DatePatternResolvedItem> for MyData {
-    fn get_pattern<RC>(
-        &self,
-    ) -> Option<PatternIterator<Self, RC, DatePatternItem, DatePatternResolvedItem>>
-    where
-        Self: Sized,
-    {
-        Some(PatternIterator {
-            data: self,
-            iter: Box::new(self.date.0.clone().into_iter()),
-            sub_iter: None,
-            collector: None,
-            idx: 0,
+impl PatternGetter<DatePatternItem> for MyData {
+    type Iter = MyPatternIterator<DatePatternItem>;
+
+    fn get_pattern(&self) -> Option<Self::Iter> {
+        Some(MyPatternIterator {
+            iter: self.date.0.clone().into_iter(),
         })
     }
 }
 
-impl PatternGetter<DateTimePatternItem, DateTimePatternResolvedItem> for MyData {
-    fn get_pattern<RC>(
-        &self,
-    ) -> Option<PatternIterator<Self, RC, DateTimePatternItem, DateTimePatternResolvedItem>>
-    where
-        Self: Sized,
-    {
-        Some(PatternIterator {
-            data: self,
-            iter: Box::new(self.date_time.0.clone().into_iter()),
-            sub_iter: None,
-            collector: None,
-            idx: 0,
-        })
-    }
-}
+impl PatternGetter<DateTimePatternItem> for MyData {
+    type Iter = MyPatternIterator<DateTimePatternItem>;
 
-impl PatternGetter<TimezonePatternItem, GenericPatternResolvedItem> for MyData {
-    fn get_pattern<RC>(
-        &self,
-    ) -> Option<PatternIterator<Self, RC, TimezonePatternItem, GenericPatternResolvedItem>>
-    where
-        Self: Sized,
-    {
-        Some(PatternIterator {
-            data: self,
-            iter: Box::new(self.timezone.0.clone().into_iter()),
-            sub_iter: None,
-            collector: None,
-            idx: 0,
+    fn get_pattern(&self) -> Option<Self::Iter> {
+        Some(MyPatternIterator {
+            iter: self.date_time.0.clone().into_iter(),
         })
     }
 }
@@ -257,16 +226,16 @@ impl<'s, RC> ReplacementProvider<'s, RC, TimezonePatternItem, TimezonePatternRes
     fn get_replacement(
         &'s self,
         _key: TimezonePatternItem,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<TimezonePatternResolvedItem>> + 's>> {
+    ) -> Option<Box<dyn PatternIterator<Item = TimezonePatternResolvedItem> + 's>> {
         None
     }
 }
-
+//
 impl<'s, RC> ReplacementProvider<'s, RC, TimezonePatternItem, TimePatternResolvedItem> for MyData {
     fn get_replacement(
         &'s self,
         _key: TimezonePatternItem,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<TimePatternResolvedItem>> + 's>> {
+    ) -> Option<Box<dyn PatternIterator<Item = TimePatternResolvedItem> + 's>> {
         None
     }
 }
@@ -275,7 +244,7 @@ impl<'s, RC> ReplacementProvider<'s, RC, DatePatternItem, DatePatternResolvedIte
     fn get_replacement(
         &'s self,
         _key: DatePatternItem,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<DatePatternResolvedItem>> + 's>> {
+    ) -> Option<Box<dyn PatternIterator<Item = DatePatternResolvedItem> + 's>> {
         None
     }
 }
@@ -287,15 +256,22 @@ where
     fn get_replacement(
         &'s self,
         key: TimePatternItem,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<TimePatternResolvedItem>> + 's>> {
+    ) -> Option<Box<dyn PatternIterator<Item = TimePatternResolvedItem> + 's>> {
         match key {
-            TimePatternItem::Timezone => Some(Box::new(PatternIterator {
-                data: self,
-                iter: Box::new(self.timezone.0.clone().into_iter()),
-                sub_iter: None,
-                collector: None::<&'s mut RC>,
-                idx: 0,
-            })),
+            TimePatternItem::Timezone => {
+                let iter: MyPatternIterator<TimezonePatternItem> = MyPatternIterator {
+                    iter: self.timezone.0.clone().into_iter(),
+                };
+                let ip: PatternInterpolator<
+                    '_,
+                    MyData,
+                    RC,
+                    MyPatternIterator<TimezonePatternItem>,
+                    TimezonePatternItem,
+                    TimePatternResolvedItem,
+                > = PatternInterpolator::new(self, iter);
+                Some(Box::new(ip))
+            }
             _ => None,
         }
     }
@@ -309,22 +285,36 @@ where
     fn get_replacement(
         &'s self,
         key: DateTimePatternItem,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<DateTimePatternResolvedItem>> + 's>> {
+    ) -> Option<Box<dyn PatternIterator<Item = DateTimePatternResolvedItem> + 's>> {
         match key {
-            DateTimePatternItem::Time => Some(Box::new(PatternIterator {
-                data: self,
-                iter: Box::new(self.time.0.clone().into_iter()),
-                sub_iter: None,
-                collector: None::<&'s mut RC>,
-                idx: 0,
-            })),
-            DateTimePatternItem::Date => Some(Box::new(PatternIterator {
-                data: self,
-                iter: Box::new(self.date.0.clone().into_iter()),
-                sub_iter: None,
-                collector: None::<&'s mut RC>,
-                idx: 0,
-            })),
+            DateTimePatternItem::Time => {
+                let iter: MyPatternIterator<TimePatternItem> = MyPatternIterator {
+                    iter: self.time.0.clone().into_iter(),
+                };
+                let ip: PatternInterpolator<
+                    '_,
+                    MyData,
+                    RC,
+                    MyPatternIterator<TimePatternItem>,
+                    TimePatternItem,
+                    DateTimePatternResolvedItem,
+                > = PatternInterpolator::new(self, iter);
+                Some(Box::new(ip))
+            }
+            DateTimePatternItem::Date => {
+                let iter: MyPatternIterator<DatePatternItem> = MyPatternIterator {
+                    iter: self.date.0.clone().into_iter(),
+                };
+                let ip: PatternInterpolator<
+                    '_,
+                    MyData,
+                    RC,
+                    MyPatternIterator<DatePatternItem>,
+                    DatePatternItem,
+                    DateTimePatternResolvedItem,
+                > = PatternInterpolator::new(self, iter);
+                Some(Box::new(ip))
+            }
         }
     }
 }
@@ -337,27 +327,34 @@ where
     fn get_replacement(
         &'s self,
         key: TimePatternItem,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<DateTimePatternResolvedItem>> + 's>> {
+    ) -> Option<Box<dyn PatternIterator<Item = DateTimePatternResolvedItem> + 's>> {
         match key {
-            TimePatternItem::Timezone => Some(Box::new(PatternIterator {
-                data: self,
-                iter: Box::new(self.timezone.0.clone().into_iter()),
-                sub_iter: None,
-                collector: None::<&'s mut RC>,
-                idx: 0,
-            })),
+            TimePatternItem::Timezone => {
+                let iter: MyPatternIterator<TimezonePatternItem> = MyPatternIterator {
+                    iter: self.timezone.0.clone().into_iter(),
+                };
+                let ip: PatternInterpolator<
+                    '_,
+                    MyData,
+                    RC,
+                    MyPatternIterator<TimezonePatternItem>,
+                    TimezonePatternItem,
+                    DateTimePatternResolvedItem,
+                > = PatternInterpolator::new(self, iter);
+                Some(Box::new(ip))
+            }
             _ => None,
         }
     }
 }
-
+//
 impl<'s, RC> ReplacementProvider<'s, RC, TimezonePatternItem, DateTimePatternResolvedItem>
     for MyData
 {
     fn get_replacement(
         &'s self,
         _key: TimezonePatternItem,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<DateTimePatternResolvedItem>> + 's>> {
+    ) -> Option<Box<dyn PatternIterator<Item = DateTimePatternResolvedItem> + 's>> {
         None
     }
 }
@@ -366,7 +363,7 @@ impl<'s, RC> ReplacementProvider<'s, RC, DatePatternItem, DateTimePatternResolve
     fn get_replacement(
         &'s self,
         _key: DatePatternItem,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<DateTimePatternResolvedItem>> + 's>> {
+    ) -> Option<Box<dyn PatternIterator<Item = DateTimePatternResolvedItem> + 's>> {
         None
     }
 }
@@ -377,7 +374,7 @@ impl<'s, RC> ReplacementProvider<'s, RC, TimezonePatternItem, GenericPatternReso
     fn get_replacement(
         &'s self,
         _key: TimezonePatternItem,
-    ) -> Option<Box<dyn Iterator<Item = PatternItem<GenericPatternResolvedItem>> + 's>> {
+    ) -> Option<Box<dyn PatternIterator<Item = GenericPatternResolvedItem> + 's>> {
         None
     }
 }
@@ -434,11 +431,14 @@ fn core_date_test() {
     {
         // timezone
         {
-            let mut pattern = data.get_pattern().unwrap();
+            let pattern =
+                <MyData as PatternGetter<TimezonePatternItem>>::get_pattern(&data).unwrap();
 
-            pattern.set_range_collector(&mut rc);
+            let mut interpolator = PatternInterpolator::new(&data, pattern);
 
-            let item = pattern.get_next();
+            interpolator.set_range_collector(&mut rc);
+
+            let item = interpolator.get_next();
 
             assert_eq!(
                 item,
@@ -447,11 +447,11 @@ fn core_date_test() {
                 )))
             );
 
-            let item = pattern.get_next();
+            let item = interpolator.get_next();
 
             assert_eq!(item, Some(PatternItem::Literal(" Time".to_string())),);
 
-            let item = pattern.get_next();
+            let item = interpolator.get_next();
 
             assert_eq!(item, None);
         }
@@ -461,12 +461,13 @@ fn core_date_test() {
 
     {
         // date
-        let mut pattern: PatternIterator<'_, _, _, _, DatePatternResolvedItem> =
-            data.get_pattern().unwrap();
+        let pattern = <MyData as PatternGetter<DatePatternItem>>::get_pattern(&data).unwrap();
 
-        pattern.set_range_collector(&mut rc);
+        let mut interpolator = PatternInterpolator::new(&data, pattern);
 
-        let item = pattern.get_next();
+        interpolator.set_range_collector(&mut rc);
+
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -475,11 +476,11 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, Some(PatternItem::Literal("/".to_string())),);
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -488,11 +489,11 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, Some(PatternItem::Literal("/".to_string())),);
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -501,7 +502,7 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, None);
     }
@@ -509,12 +510,13 @@ fn core_date_test() {
     {
         // time
         {
-            let mut pattern: PatternIterator<'_, _, _, _, TimePatternResolvedItem> =
-                data.get_pattern().unwrap();
+            let pattern = <MyData as PatternGetter<TimePatternItem>>::get_pattern(&data).unwrap();
 
-            pattern.set_range_collector(&mut rc);
+            let mut interpolator = PatternInterpolator::new(&data, pattern);
 
-            let item = pattern.get_next();
+            interpolator.set_range_collector(&mut rc);
+
+            let item = interpolator.get_next();
 
             assert_eq!(
                 item,
@@ -523,11 +525,11 @@ fn core_date_test() {
                 )))
             );
 
-            let item = pattern.get_next();
+            let item = interpolator.get_next();
 
             assert_eq!(item, Some(PatternItem::Literal(":".to_string())),);
 
-            let item = pattern.get_next();
+            let item = interpolator.get_next();
 
             assert_eq!(
                 item,
@@ -536,11 +538,11 @@ fn core_date_test() {
                 )))
             );
 
-            let item = pattern.get_next();
+            let item = interpolator.get_next();
 
             assert_eq!(item, Some(PatternItem::Literal(" ".to_string())),);
 
-            let item = pattern.get_next();
+            let item = interpolator.get_next();
 
             assert_eq!(
                 item,
@@ -549,11 +551,11 @@ fn core_date_test() {
                 )))
             );
 
-            let item = pattern.get_next();
+            let item = interpolator.get_next();
 
             assert_eq!(item, Some(PatternItem::Literal(" Time".to_string())),);
 
-            let item = pattern.get_next();
+            let item = interpolator.get_next();
 
             assert_eq!(item, None);
         }
@@ -569,12 +571,13 @@ fn core_date_test() {
 
     {
         // date_time
-        let mut pattern: PatternIterator<'_, _, _, _, DateTimePatternResolvedItem> =
-            data.get_pattern().unwrap();
+        let pattern = <MyData as PatternGetter<DateTimePatternItem>>::get_pattern(&data).unwrap();
 
-        pattern.set_range_collector(&mut rc);
+        let mut interpolator = PatternInterpolator::new(&data, pattern);
 
-        let item = pattern.get_next();
+        interpolator.set_range_collector(&mut rc);
+
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -583,11 +586,11 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, Some(PatternItem::Literal(":".to_string())),);
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -596,11 +599,11 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, Some(PatternItem::Literal(" ".to_string())),);
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -609,15 +612,15 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, Some(PatternItem::Literal(" Time".to_string())),);
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, Some(PatternItem::Literal(" at ".to_string())),);
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -626,11 +629,11 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, Some(PatternItem::Literal("/".to_string())),);
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -639,11 +642,11 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, Some(PatternItem::Literal("/".to_string())),);
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -652,24 +655,20 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, None);
     }
 
     {
         // timezone
-        let mut pattern: PatternIterator<
-            '_,
-            _,
-            _,
-            TimezonePatternItem,
-            GenericPatternResolvedItem,
-        > = data.get_pattern().unwrap();
+        let pattern = <MyData as PatternGetter<TimezonePatternItem>>::get_pattern(&data).unwrap();
 
-        pattern.set_range_collector(&mut rc);
+        let mut interpolator = PatternInterpolator::new(&data, pattern);
 
-        let item = pattern.get_next();
+        interpolator.set_range_collector(&mut rc);
+
+        let item = interpolator.get_next();
 
         assert_eq!(
             item,
@@ -678,11 +677,11 @@ fn core_date_test() {
             )))
         );
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, Some(PatternItem::Literal(" Time".to_string())),);
 
-        let item = pattern.get_next();
+        let item = interpolator.get_next();
 
         assert_eq!(item, None);
     }
