@@ -13,11 +13,22 @@ pub trait PatternIterator {
     fn next(&mut self) -> Option<PatternItem<Self::Item>>;
 }
 
+pub trait PatternIteratorWithCollector<'s, RC = ()> {
+    type Item;
+
+    fn next(&mut self) -> Option<PatternItem<Self::Item>>;
+
+    fn set_range_collector(&mut self, rc: &'s RC);
+}
+
 pub struct PatternInterpolator<'s, RP, RC, Iter, InputItem, OutputItem> {
     pub data: &'s RP,
     pub iter: Iter,
-    pub sub_iter: Option<(InputItem, Box<dyn PatternIterator<Item = OutputItem> + 's>)>,
-    pub collector: Option<&'s mut RC>,
+    pub sub_iter: Option<(
+        InputItem,
+        Box<dyn PatternIteratorWithCollector<'s, RC, Item = OutputItem> + 's>,
+    )>,
+    pub collector: Option<&'s RC>,
     pub idx: usize,
 }
 
@@ -40,7 +51,7 @@ where
         }
     }
 
-    pub fn set_range_collector(&mut self, rc: &'s mut RC) {
+    pub fn set_range_collector(&mut self, rc: &'s RC) {
         self.collector = Some(rc);
     }
 
@@ -51,7 +62,7 @@ where
                 self.idx += 1;
                 return Some(item);
             } else {
-                if let Some(rc) = &mut self.collector {
+                if let Some(rc) = self.collector {
                     rc.add_marker(
                         sub_item.get_label(),
                         RangeCollectorMarkerType::End,
@@ -69,7 +80,8 @@ where
             PatternItem::Item(i) => {
                 let repl = self.data.get_replacement(i);
                 if let Some(mut repl) = repl {
-                    if let Some(rc) = &mut self.collector {
+                    if let Some(rc) = self.collector {
+                        repl.set_range_collector(rc);
                         rc.add_marker(i.get_label(), RangeCollectorMarkerType::Start, self.idx - 1);
                     }
                     let item = repl.next();
@@ -100,11 +112,31 @@ where
     }
 }
 
+impl<'s, RP, RC, Iter, InputItem, OutputItem> PatternIteratorWithCollector<'s, RC>
+    for PatternInterpolator<'s, RP, RC, Iter, InputItem, OutputItem>
+where
+    RP: ReplacementProvider<'s, RC, InputItem, OutputItem>,
+    RC: RangeCollector,
+    Iter: PatternIterator<Item = InputItem>,
+    OutputItem: From<InputItem>,
+    InputItem: Copy + Labellable,
+{
+    type Item = OutputItem;
+
+    fn next(&mut self) -> Option<PatternItem<Self::Item>> {
+        self.get_next()
+    }
+
+    fn set_range_collector(&mut self, rc: &'s RC) {
+        self.collector = Some(rc);
+    }
+}
+
 pub trait ReplacementProvider<'s, RC, Key, OutputItem> {
     fn get_replacement(
         &'s self,
         key: Key,
-    ) -> Option<Box<dyn PatternIterator<Item = OutputItem> + 's>>;
+    ) -> Option<Box<dyn PatternIteratorWithCollector<RC, Item = OutputItem> + 's>>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -118,11 +150,6 @@ pub type RangeCollectorMarker = (&'static str, RangeCollectorMarkerType, usize);
 pub trait RangeCollector {
     type Iter: Iterator<Item = RangeCollectorMarker>;
 
-    fn add_marker(
-        &mut self,
-        label: &'static str,
-        marker_type: RangeCollectorMarkerType,
-        idx: usize,
-    );
+    fn add_marker(&self, label: &'static str, marker_type: RangeCollectorMarkerType, idx: usize);
     fn get_markers(&self) -> Self::Iter;
 }
